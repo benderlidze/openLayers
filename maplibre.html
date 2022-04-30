@@ -81,6 +81,8 @@
         const trackingPath = [];
 
         map.on('load', function () {
+
+
             map.addSource('route', {
                 'type': 'geojson',
                 'data': {
@@ -105,6 +107,34 @@
                 'paint': {
                     'line-color': 'red',
                     'line-width': 8
+                }
+            });
+
+
+            map.addSource('bezier', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'properties': {},
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': [
+
+                        ]
+                    }
+                }
+            });
+            map.addLayer({
+                'id': 'bezier',
+                'type': 'line',
+                'source': 'bezier',
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': 'green',
+                    'line-width': 5
                 }
             });
 
@@ -133,22 +163,28 @@
         function getPosition(position) {
             console.log(position)
             const { latitude, longitude, accuracy } = position.coords;
-            const pos = [longitude, latitude];
-            //const pos = turf.randomPosition([49, 23, 43, 20])
+            //const pos = [longitude, latitude];
+            const pos = turf.randomPosition([23, 49, 24, 50])
             trackingPath.push(pos);
 
-            const line = {
-                'type': 'Feature',
-                'properties': {},
-                'geometry': {
-                    'type': 'LineString',
-                    'coordinates': trackingPath
-                }
-            }
 
-            map.getSource('route').setData(line)
 
             if (trackingPath.length > 1) {
+
+                const line = {
+                    'type': 'Feature',
+                    'properties': {},
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': trackingPath
+                    }
+                }
+                map.getSource('route').setData(line)
+                
+                var curved = turf.bezierSpline(line);
+                map.getSource('bezier').setData(curved)
+
+
                 const to = trackingPath[trackingPath.length - 1]
                 const from = trackingPath[trackingPath.length - 2]
                 var start = turf.point(from);

@@ -134,7 +134,7 @@
                 },
                 'paint': {
                     'line-color': 'green',
-                    'line-width': 5
+                    'line-width': 3
                 }
             });
 
@@ -180,7 +180,7 @@
                     }
                 }
                 map.getSource('route').setData(line)
-                
+
                 var curved = turf.bezierSpline(line);
                 map.getSource('bezier').setData(curved)
 

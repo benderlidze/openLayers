@@ -68,8 +68,8 @@
             console.log("Your browser doesn't support geolocation feature!")
         } else {
             setInterval(() => {
-                // navigator.geolocation.getCurrentPosition(getPosition)
-            }, 10000);
+                navigator.geolocation.getCurrentPosition(getPosition)
+            }, 1000);
         };
 
 
@@ -92,15 +92,14 @@
                 var bearing = turf.bearing(start, end);
                 const azimuth = turf.bearingToAzimuth(bearing)
                 const rad = turf.degreesToRadians(-azimuth)
-                
-                map.getView().setRotation(rad)
+
                 console.log('bearign', bearing);
                 console.log('bearign', azimuth);
 
                 var line = turf.lineString(trackingPath);
                 var curved = turf.bezierSpline(line);
                 const coords = curved.geometry.coordinates.map(i => i.reverse())
-
+                
                 var route = new ol.geom.LineString(trackingPath)
                 route.transform('EPSG:4326', 'EPSG:3857');
                 var routeFeature = new ol.Feature({
@@ -113,9 +112,11 @@
                 });
                 feature.setStyle(styles.route);
                 vectorSource.addFeature(feature);
-
+                
+                map.getView().fit(vectorSource.getExtent());
+                map.getView().setRotation(rad)
             }
-            // console.log("Your coordinate is: Lat: " + latitude + " Long: " + longitude + " Accuracy: " + accuracy)
+            console.log("Your coordinate is: Lat: " + latitude + " Long: " + longitude + " Accuracy: " + accuracy)
         }
 
         //map.getView().setRotation(45 * 0.017453)

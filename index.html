@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Full Screen Drag, Rotate, and Zoom</title>
+    <!-- Pointer events polyfill for old browsers, see https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep@1.0.6/dist/elm-pep.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <!-- The lines below are only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.14.1/build/ol.js"></script>
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.14.1/css/ol.css">
+    <style>
+        body,
+        html {
+            padding: 0px;
+            margin: 0px;
+        }
+
+        .map {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map" class="map"></div>
+    <script>
+        // center is equal to first coordinate of array
+        const trackingPath = []
+        const center = [6.84913974, 53.44241609];
+
+        const vectorSource = new ol.source.Vector()
+        const vectorLayer = new ol.layer.Vector({
+            source: vectorSource
+        })
+
+        const styles = {
+            'route': new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    width: 4,
+                    color: [255, 0, 0, 0.8]
+                })
+            }),
+        };
+
+        const map = new ol.Map({
+            target: document.getElementById('map'),
+            loadTilesWhileAnimating: true,
+            view: new ol.View({
+                // set map center to first coordinate
+                center: center,
+                zoom: 3,
+                minZoom: 2,
+                maxZoom: 19
+            }),
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                }),
+                vectorLayer
+            ]
+        });
+
+        if (!navigator.geolocation) {
+            console.log("Your browser doesn't support geolocation feature!")
+        } else {
+            setInterval(() => {
+                // navigator.geolocation.getCurrentPosition(getPosition)
+            }, 10000);
+        };
+
+
+        function getPosition(position) {
+            // console.log(position)
+            const { latitude, longitude, accuracy } = position.coords
+            //const pos = [longitude, latitude]
+            const pos = turf.randomPosition([49, 23, 43, 20])
+            trackingPath.push(pos)
+
+
+            //curved line 
+
+            if (trackingPath.length > 1) {
+
+                const to = trackingPath[trackingPath.length - 1]
+                const from = trackingPath[trackingPath.length - 2]
+                var start = turf.point(from);
+                var end = turf.point(to);
+                var bearing = turf.bearing(start, end);
+                const azimuth = turf.bearingToAzimuth(bearing)
+                const rad = turf.degreesToRadians(-azimuth)
+                
+                map.getView().setRotation(rad)
+                console.log('bearign', bearing);
+                console.log('bearign', azimuth);
+
+                var line = turf.lineString(trackingPath);
+                var curved = turf.bezierSpline(line);
+                const coords = curved.geometry.coordinates.map(i => i.reverse())
+
+                var route = new ol.geom.LineString(trackingPath)
+                route.transform('EPSG:4326', 'EPSG:3857');
+                var routeFeature = new ol.Feature({
+                    type: 'route',
+                    geometry: route
+                });
+                var feature = new ol.Feature({
+                    type: 'route',
+                    geometry: route
+                });
+                feature.setStyle(styles.route);
+                vectorSource.addFeature(feature);
+
+            }
+            // console.log("Your coordinate is: Lat: " + latitude + " Long: " + longitude + " Accuracy: " + accuracy)
+        }
+
+        //map.getView().setRotation(45 * 0.017453)
+
+    </script>
+</body>
+
+</html>

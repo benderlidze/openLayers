@@ -163,8 +163,8 @@
         function getPosition(position) {
             console.log(position)
             const { latitude, longitude, accuracy } = position.coords;
-            //const pos = [longitude, latitude];
-            const pos = turf.randomPosition([23, 49, 24, 50])
+            const pos = [longitude, latitude];
+            //const pos = turf.randomPosition([23, 49, 24, 50])
             trackingPath.push(pos);
 
 

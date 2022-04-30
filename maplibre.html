@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Add a GeoJSON line</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <script src="https://unpkg.com/maplibre-gl@2.1.9/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@2.1.9/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <style>
+        html {
+            font-size: 62.5%;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-size: 1.6rem;
+            font-family: sans-serif;
+            width: 95vw;
+            height: 90vh;
+            margin: 0 auto;
+        }
+
+        header {
+            padding: 1rem 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .marker img {
+            width: 3rem;
+        }
+
+        .marker span {
+            display: block;
+            background: #fff;
+            width: 10rem;
+            padding: 1rem;
+            border-radius: 0.4rem;
+            border: 1px solid black;
+        }
+
+        @media (max-width: 481px) {
+
+            /* portrait e-readers (Nook/Kindle), smaller tablets @ 600 or @ 640 wide. */
+            #status {
+                display: block;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <button id="start">start</button>
+        <button id="stop">stop</button>
+        <button id="marker">add marker</button>
+        <button id="export">export</button>
+        <span id="status"></span>
+    </header>
+    <div id="map"></div>
+
+    <script>
+
+        const exportButton = document.getElementById("export");
+        const map = new maplibregl.Map({
+            container: 'map',
+            style:
+                'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+            center:  {lng: -97.80878792253657, lat: 37.02645594648298},
+            zoom: 3
+        });
+
+        map.addControl(new maplibregl.NavigationControl());
+
+        const trackingPath = [];
+
+        map.on('load', function () {
+            map.addSource('route', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'properties': {},
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': [
+
+                        ]
+                    }
+                }
+            });
+            map.addLayer({
+                'id': 'route',
+                'type': 'line',
+                'source': 'route',
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': 'red',
+                    'line-width': 8
+                }
+            });
+
+            // if (!navigator.geolocation) {
+            //     console.log("Your browser doesn't support geolocation feature!");
+            // } else {
+            //     start();
+            // }
+
+        });
+
+
+        function start() {
+            navigator.geolocation.getCurrentPosition(getPosition);
+            intv = setInterval(() => {
+                navigator.geolocation.getCurrentPosition(getPosition);
+            }, 2500);
+        }
+
+        function getPosition(position) {
+            console.log(position)
+            const { latitude, longitude, accuracy } = position.coords;
+            const pos = [latitude, longitude];
+            //const pos = turf.randomPosition([49, 23, 43, 20])
+            trackingPath.push(pos);
+
+            const line = {
+                'type': 'Feature',
+                'properties': {},
+                'geometry': {
+                    'type': 'LineString',
+                    'coordinates': trackingPath
+                }
+            }
+
+            map.getSource('route').setData(line)
+
+            if (trackingPath.length > 1) {
+                const to = trackingPath[trackingPath.length - 1]
+                const from = trackingPath[trackingPath.length - 2]
+                var start = turf.point(from);
+                var end = turf.point(to);
+                var bearing = turf.bearing(start, end);
+                map.flyTo({
+                    center: map.getCenter(),
+                    bearing: bearing
+                });
+            }
+
+            // map.once("idle", () => {
+            //     var bounds = new maplibregl.LngLatBounds();
+            //     trackingPath.forEach(point => bounds.extend(point))
+            //     map.fitBounds(bounds, { padding: 100 });
+            // })
+
+            //map.fitBounds(polyline.getBounds());
+            console.log(
+                "Your coordinate is: Lat: " +
+                latitude +
+                " Long: " +
+                longitude +
+                " Accuracy: " +
+                accuracy
+            );
+        }
+
+        exportButton.addEventListener("click", function () {
+            console.log("trackingPath", trackingPath);
+            save("data.txt", JSON.stringify(trackingPath));
+        });
+
+        function save(filename, data) {
+            const blob = new Blob([data], { type: "text/csv" });
+            if (window.navigator.msSaveOrOpenBlob) {
+                window.navigator.msSaveBlob(blob, filename);
+            } else {
+                const elem = window.document.createElement("a");
+                elem.href = window.URL.createObjectURL(blob);
+                elem.download = filename;
+                document.body.appendChild(elem);
+                elem.click();
+                document.body.removeChild(elem);
+            }
+        }
+
+        function addMarker(e) {
+            e.preventDefault();
+            console.log("add marker");
+            status.innerText = "adding marker...";
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude, accuracy } = position.coords;
+                const pos = [latitude, longitude];
+                var marker = new maplibregl.Marker()
+                    .setLngLat([longitude, latitude])
+                    .addTo(map);
+
+                status.innerText = `Marker added at ${pos.join(", ")}`;
+            });
+        }
+
+        function startTracking(e) {
+            status.innerText = "Started tracking...";
+            e.preventDefault();
+            start();
+        }
+
+        function stopTracking(e) {
+            status.innerText = "Stopped tracking.";
+            e.preventDefault();
+            clearInterval(intv);
+        }
+
+        document.getElementById("start").addEventListener("click", startTracking);
+        document.getElementById("stop").addEventListener("click", stopTracking);
+        document.getElementById("marker").addEventListener("click", addMarker);
+    </script>
+
+</body>
+
+</html>

@@ -72,7 +72,7 @@
             container: 'map',
             style:
                 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
-            center:  {lng: -97.80878792253657, lat: 37.02645594648298},
+            center: { lng: -97.80878792253657, lat: 37.02645594648298 },
             zoom: 3
         });
 
@@ -113,7 +113,13 @@
             // } else {
             //     start();
             // }
-
+            navigator.geolocation.getCurrentPosition(position => {
+                const { latitude, longitude, accuracy } = position.coords;
+                map.panTo([longitude, latitude], {
+                    duration: 1000,
+                    zoom: 10
+                })
+            });
         });
 
 

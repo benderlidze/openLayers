@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+    html {
+      font-size: 62.5%;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-size: 1.6rem;
+      font-family: sans-serif;
+      width: 95vw;
+      height: 90vh;
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 1rem 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .marker img {
+      width: 3rem;
+    }
+
+    .marker span {
+      display: block;
+      background: #fff;
+      width: 10rem;
+      padding: 1rem;
+      border-radius: 0.4rem;
+      border: 1px solid black;
+    }
+
+    @media (max-width: 481px) {
+
+      /* portrait e-readers (Nook/Kindle), smaller tablets @ 600 or @ 640 wide. */
+      #status {
+        display: block;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <button id="start">start</button>
+    <button id="stop">stop</button>
+    <button id="marker">add marker</button>
+    <button id="export">export</button>
+    <span id="status"></span>
+    <span id="distance"></span>
+  </header>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script>
+    const exportButton = document.getElementById("export");
+    let intv;
+
+    const status = document.getElementById("status");
+    const distance = document.getElementById("distance");
+    let startTime;
+
+    var map = L.map("map", {
+      center: [9.082, 8.6753],
+      zoom: 8,
+    });
+    var osm = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution:
+          '&copy; <a href="https://skatespot.com">SkateSpot, Inc.</a>',
+      }
+    ).addTo(map);
+    L.Control.geocoder().addTo(map);
+    if (!navigator.geolocation) {
+      console.log("Your browser doesn't support geolocation feature!");
+    }
+
+    const trackingPath = [];
+    const polyline = L.polyline([], {
+      color: "red",
+      weight: 3,
+      className: "path",
+    }).addTo(map);
+
+    function start() {
+      startTime = new Date().getTime()
+      navigator.geolocation.getCurrentPosition(getPosition);
+      intv = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(getPosition);
+      }, 1000);
+    }
+
+    function getPosition(position) {
+      // console.log(position)
+      const { latitude, longitude, accuracy } = position.coords;
+      const pos = [latitude, longitude];
+      //const pos = turf.randomPosition([49, 23, 43, 20])
+      trackingPath.push(pos);
+      polyline.addLatLng(pos);
+      map.fitBounds(polyline.getBounds());
+
+
+      //distance
+      if (trackingPath.length > 1) {
+        var line = turf.lineString(trackingPath);
+        var length = turf.length(line, { units: 'miles' });
+        //speed
+        curTime = new Date().getTime()
+        const diffTime = (curTime - startTime) / 1000 / 60 / 60;
+        const speed = length / diffTime
+        console.log('speed', speed, length / speed);
+        distance.innerHTML = `${length} miles, ${speed.toFixed(2)} mph`;
+      }
+
+      console.log(
+        "Your coordinate is: Lat: " +
+        latitude +
+        " Long: " +
+        longitude +
+        " Accuracy: " +
+        accuracy
+      );
+    }
+
+    exportButton.addEventListener("click", function () {
+      console.log("trackingPath", trackingPath);
+      save("data.txt", JSON.stringify(trackingPath));
+    });
+
+    function save(filename, data) {
+      const blob = new Blob([data], { type: "text/csv" });
+      if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, filename);
+      } else {
+        const elem = window.document.createElement("a");
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = filename;
+        document.body.appendChild(elem);
+        elem.click();
+        document.body.removeChild(elem);
+      }
+    }
+
+    function addMarker(e) {
+      e.preventDefault();
+      console.log("add marker");
+      status.innerText = "adding marker...";
+      navigator.geolocation.getCurrentPosition((position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        const pos = [latitude, longitude];
+
+        var marker = L.marker(pos, {
+          icon: new L.DivIcon({
+            className: "marker",
+            html: `<img src="/marker.svg" alt="" />
+										<span contenteditable>click to edit</span>`,
+          }),
+        }).addTo(map);
+        var Overlaymaps = {
+          Marker: marker,
+        };
+        L.control.layers(Overlaymaps).addTo(map);
+
+        status.innerText = `Marker added at ${pos.join(", ")}`;
+      });
+    }
+
+    function startTracking(e) {
+      status.innerText = "Started tracking...";
+      e.preventDefault();
+      start();
+    }
+
+    function stopTracking(e) {
+      status.innerText = "Stopped tracking.";
+      e.preventDefault();
+      clearInterval(intv);
+    }
+
+    document.getElementById("start").addEventListener("click", startTracking);
+    document.getElementById("stop").addEventListener("click", stopTracking);
+    document.getElementById("marker").addEventListener("click", addMarker);
+  </script>
+</body>
+
+</html>

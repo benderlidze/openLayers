@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Document</title>
+  <title>Tracking Map - Skatespot.com</title>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
     integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
@@ -76,6 +76,7 @@
   <script>
     const exportButton = document.getElementById("export");
     let intv;
+    let watchId;
 
     const status = document.getElementById("status");
     const distance = document.getElementById("distance");
@@ -95,6 +96,8 @@
     L.Control.geocoder().addTo(map);
     if (!navigator.geolocation) {
       console.log("Your browser doesn't support geolocation feature!");
+    } else {
+      navigator.geolocation.getCurrentPosition(setMapStart);
     }
 
     const trackingPath = [];
@@ -105,11 +108,26 @@
     }).addTo(map);
 
     function start() {
-      startTime = new Date().getTime()
-      navigator.geolocation.getCurrentPosition(getPosition);
-      intv = setInterval(() => {
-        navigator.geolocation.getCurrentPosition(getPosition);
-      }, 1000);
+      startTime = new Date().getTime();
+      watchId = navigator.geolocation.watchPosition(
+        getPosition,
+        console.error,
+        { enableHighAccuracy: true }
+      );
+      /*
+        intv = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(getPosition);
+        }, 1000);
+      */
+    }
+    function setMapStart(position) {
+      const { latitude, longitude, accuracy } = position.coords;
+      const pos = [latitude, longitude];
+      console.log("set: ", pos);
+
+      map.setView(new L.LatLng(latitude, longitude), 15, {
+        animation: true,
+      });
     }
 
     function getPosition(position) {
@@ -121,18 +139,20 @@
         pos,
         time: new Date().getTime()
       });
+
       polyline.addLatLng(pos);
       map.fitBounds(polyline.getBounds());
-
 
       //distance
       if (trackingPath.length > 1) {
         var line = turf.lineString(trackingPath.map(i => i.pos));
-        var length = turf.length(line, { units: 'miles' });
+
+        console.log('',);
+        var length = turf.length(line, { units: "miles" });
         //speed
-        curTime = new Date().getTime()
+        curTime = new Date().getTime();
         const diffTime = (curTime - startTime) / 1000 / 60 / 60;
-        const speed = length / diffTime
+        const speed = length / diffTime;
         const segStop = trackingPath[trackingPath.length - 1]
         const segStart = trackingPath[trackingPath.length - 2]
         const segment = turf.lineString([
@@ -188,7 +208,7 @@
           icon: new L.DivIcon({
             className: "marker",
             html: `<img src="/marker.svg" alt="" />
-										<span contenteditable>click to edit</span>`,
+      								<span contenteditable>click to edit</span>`,
           }),
         }).addTo(map);
         var Overlaymaps = {
@@ -209,7 +229,8 @@
     function stopTracking(e) {
       status.innerText = "Stopped tracking.";
       e.preventDefault();
-      clearInterval(intv);
+      //clearInterval(intv);
+      navigator.geolocation.clearWatch(watchId);
     }
 
     document.getElementById("start").addEventListener("click", startTracking);

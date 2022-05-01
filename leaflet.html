@@ -115,23 +115,40 @@
     function getPosition(position) {
       // console.log(position)
       const { latitude, longitude, accuracy } = position.coords;
-      const pos = [latitude, longitude];
-      //const pos = turf.randomPosition([49, 23, 43, 20])
-      trackingPath.push(pos);
+      //const pos = [latitude, longitude];
+      const pos = turf.randomPosition([49, 23, 43, 20])
+      trackingPath.push({
+        pos,
+        time: new Date().getTime()
+      });
       polyline.addLatLng(pos);
       map.fitBounds(polyline.getBounds());
 
 
       //distance
       if (trackingPath.length > 1) {
-        var line = turf.lineString(trackingPath);
+        var line = turf.lineString(trackingPath.map(i => i.pos));
         var length = turf.length(line, { units: 'miles' });
         //speed
         curTime = new Date().getTime()
         const diffTime = (curTime - startTime) / 1000 / 60 / 60;
         const speed = length / diffTime
+
+
+
+
+        const segStop = trackingPath[trackingPath.length - 1]
+        const segStart = trackingPath[trackingPath.length - 2]
+        const segment = turf.lineString([
+          segStart.pos,
+          segStop.pos
+        ]);
+        var segmentLength = turf.length(segment, { units: 'miles' });
+        const tDiff = (segStop.time - segStart.time) / 1000 / 60 / 60;
+        const segmentSpeed = segmentLength / diffTime
+
         console.log('speed', speed, length / speed);
-        distance.innerHTML = `${length} miles, ${speed.toFixed(2)} mph`;
+        distance.innerHTML = `${length} miles, avg ${speed.toFixed(2)} mph, cur segemnt ${segmentSpeed}`;
       }
 
       console.log(

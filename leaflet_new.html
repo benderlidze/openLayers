@@ -171,7 +171,8 @@
         const sSpeed10 = getSegmentSpeed(10, trackingPath);
 
         console.log('speed', speed, length / speed);
-        distance.innerHTML = `${length} miles, avg ${speed.toFixed(2)} mph, ${segmentSpeed} cur segemnt ${sSpeed10}`;
+        distance.innerHTML = `${length} miles, avg ${speed.toFixed(2)} mph, 
+        segment speed ${segmentSpeed} and for the last 10  points: ${sSpeed10}`;
       }
 
       console.log(
